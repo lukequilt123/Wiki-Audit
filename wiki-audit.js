@@ -9,6 +9,7 @@
   // ── CONFIGURATION ────────────────────────────────────────────
   const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
   const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+  const PROXY_URL = 'https://wikiaudit-proxy.luke-bcf.workers.dev';
 
   const SYSTEM_INSTRUCTION = `
 Act as a strict Wikipedia Policy Administrator (User Group: Sysop). Your goal is to audit a batch of proposed sources to ensure they meet English Wikipedia's sourcing guidelines (WP:RS, WP:V).
@@ -115,12 +116,12 @@ Present the findings as a clean Markdown Table with these specific headers:
       els.apiKeyBadge.style.cursor = 'pointer';
       els.apiKeyBadge.title = 'Click to change API key';
     } else {
-      els.apiKeyBadge.textContent = 'API Key: Not Set';
-      els.apiKeyBadge.style.background = 'rgba(239, 68, 68, 0.15)';
-      els.apiKeyBadge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-      els.apiKeyBadge.style.color = '#f87171';
+      els.apiKeyBadge.textContent = 'Using Proxy';
+      els.apiKeyBadge.style.background = 'rgba(139, 92, 246, 0.15)';
+      els.apiKeyBadge.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+      els.apiKeyBadge.style.color = '#a78bfa';
       els.apiKeyBadge.style.cursor = 'pointer';
-      els.apiKeyBadge.title = 'Click to enter API key';
+      els.apiKeyBadge.title = 'Using server proxy. Click to enter your own API key instead.';
     }
   }
 
@@ -164,9 +165,7 @@ Present the findings as a clean Markdown Table with these specific headers:
   // ── GEMINI API CALL ──────────────────────────────────────────
   async function auditSources(topic, sources) {
     var apiKey = getApiKey();
-    if (!apiKey) {
-      throw new Error('Gemini API key not configured. Please add your key to config.js');
-    }
+    var useProxy = !apiKey;
 
     var prompt = [
       '**Audit Request:**',
@@ -178,8 +177,6 @@ Present the findings as a clean Markdown Table with these specific headers:
       '',
       'CRITICAL: Output ONLY the Markdown Table. Do not write any introductory summary, preamble, or conclusion text. Start the response immediately with the markdown header row.'
     ].join('\n');
-
-    var url = GEMINI_API_URL + '/' + GEMINI_MODEL + ':generateContent?key=' + apiKey;
 
     var body = {
       system_instruction: {
@@ -196,11 +193,25 @@ Present the findings as a clean Markdown Table with these specific headers:
       }]
     };
 
-    var response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+    var url, response;
+
+    if (useProxy) {
+      // Use Cloudflare Worker proxy (API key stored server-side)
+      body.model = GEMINI_MODEL;
+      response = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      // Direct Gemini API call (local dev with config.js)
+      url = GEMINI_API_URL + '/' + GEMINI_MODEL + ':generateContent?key=' + apiKey;
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
 
     if (!response.ok) {
       var errData;
@@ -546,10 +557,7 @@ Present the findings as a clean Markdown Table with these specific headers:
       return;
     }
 
-    if (!getApiKey()) {
-      showFormError('Gemini API key not configured. Click the "API Key: Not Set" badge in the nav bar to enter your key.');
-      return;
-    }
+    // API key check is optional — if no local key, the proxy handles it
 
     setState('loading');
 
