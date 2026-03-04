@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Builder — Sleeping Giant Media</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700;900&family=Open+Sans:ital,wght@0,400;0,500;0,600&display=swap" rel="stylesheet">
+  <style>
+
+    /* ── RESET ───────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background: #1a0d2e;
+      overflow-x: hidden;
+    }
+
+    /* ── LAYOUT ──────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 55fr 45fr;
+      min-height: 100vh;
+    }
+
+    /* ── GRAIN TEXTURE ───────────────────────── */
+    .grain-layer {
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+      pointer-events: none;
+      opacity: 0.5;
+      z-index: 0;
+    }
+
+    /* ── LEFT: FORM PANEL ────────────────────── */
+    .form-panel {
+      background: #26153a;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 0% 0%, rgba(127,95,206,0.28), transparent),
+        radial-gradient(ellipse 60% 50% at 100% 100%, rgba(255,28,192,0.12), transparent);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .panel-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 52px 64px 52px 64px;
+    }
+
+    /* ── LOGO ────────────────────────────────── */
+    .logo {
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 64px;
+      flex-shrink: 0;
+    }
+    .logo .grad {
+      background: linear-gradient(126deg, #ff1cc0, #7f5fce);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── FORM CONTENT ────────────────────────── */
+    .form-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 520px;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .form-content.hidden {
+      opacity: 0;
+      transform: translateY(-16px);
+      pointer-events: none;
+      position: absolute;
+    }
+
+    /* ── EYEBROW BADGE ───────────────────────── */
+    .eyebrow-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: linear-gradient(126deg, rgba(255,28,192,0.2), rgba(127,95,206,0.2));
+      border: 1px solid rgba(255,28,192,0.3);
+      color: rgba(255,255,255,0.8);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 5px 14px 5px 10px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+      width: fit-content;
+    }
+    .eyebrow-badge::before {
+      content: '';
+      display: block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: linear-gradient(126deg, #ff1cc0, #7f5fce);
+      animation: pulse-dot 2s ease infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.75); }
+    }
+
+    /* ── TITLE ───────────────────────────────── */
+    .title {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(3rem, 6vw, 5rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -3px;
+      line-height: 0.92;
+      color: white;
+      margin-bottom: 22px;
+    }
+    .title .grad {
+      background: linear-gradient(126deg, #ff1cc0 52%, #7f5fce 86%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      line-height: 1.72;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 40px;
+      max-width: 440px;
+    }
+
+    /* ── FORM FIELDS ─────────────────────────── */
+    .field {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 9px;
+    }
+
+    textarea, input[type="email"] {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: white;
+      font-family: 'Open Sans', sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+    textarea::placeholder, input[type="email"]::placeholder {
+      color: rgba(255,255,255,0.28);
+    }
+    textarea:focus, input[type="email"]:focus {
+      border-color: rgba(255,28,192,0.55);
+      background: rgba(255,255,255,0.09);
+      box-shadow: 0 0 0 3px rgba(255,28,192,0.12);
+    }
+
+    textarea {
+      min-height: 190px;
+      resize: vertical;
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+    input[type="email"] {
+      border-radius: 40px;
+      padding: 14px 22px;
+    }
+
+    /* Disabled state during loading */
+    textarea:disabled, input[type="email"]:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── SUBMIT BUTTON ───────────────────────── */
+    .btn-submit {
+      width: 100%;
+      padding: 16px 32px;
+      border-radius: 40px;
+      border: none;
+      background: linear-gradient(126deg, #ff1cc0 52%, #7f5fce 86%);
+      color: white;
+      font-family: 'Oswald', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: -0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-2px); opacity: 0.9; }
+    .btn-submit:active:not(:disabled) { transform: translateY(0); }
+    .btn-submit:disabled { cursor: not-allowed; opacity: 0.7; }
+
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-loading-text { display: none; }
+
+    /* When loading class is on form panel */
+    .loading .spinner          { display: block; }
+    .loading .btn-loading-text { display: block; }
+    .loading .btn-text         { display: none; }
+
+    /* ── ERROR BANNER ────────────────────────── */
+    .error-banner {
+      display: none;
+      background: rgba(220,38,38,0.15);
+      border: 1px solid rgba(220,38,38,0.4);
+      color: rgba(255,180,180,0.9);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .error-banner.visible { display: block; }
+
+    /* ── SUCCESS STATE ───────────────────────── */
+    .success-content {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 480px;
+      animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    .success-content.visible { display: flex; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 28px;
+    }
+    .success-icon svg { width: 100%; height: 100%; }
+
+    .success-content h2 {
+      font-family: 'Oswald', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -1.5px;
+      color: white;
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+    .success-content p {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 36px;
+      max-width: 380px;
+    }
+
+    .btn-restart {
+      display: inline-flex;
+      align-items: center;
+      background: transparent;
+      border: 2px solid rgba(255,255,255,0.25);
+      color: rgba(255,255,255,0.7);
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: -0.3px;
+      padding: 10px 26px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+      width: fit-content;
+    }
+    .btn-restart:hover { border-color: white; color: white; transform: translateY(-2px); }
+
+    /* ── RIGHT: PREVIEW PANEL ────────────────── */
+    .preview-panel {
+      background: #1a0d2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .preview-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* ── STACKED DOCUMENT EFFECT ─────────────── */
+    .doc-stack {
+      position: relative;
+      width: 290px;
+      height: calc(290px * 1.414);
+    }
+
+    /* Ghost pages behind */
+    .pdf-ghost {
+      position: absolute;
+      inset: 0;
+      border-radius: 5px;
+      background: linear-gradient(135deg, #5b1a9a 0%, #b020a8 45%, #d91a82 80%, #e8156a 100%);
+    }
+    .ghost-2 {
+      transform: rotate(7deg) translate(22px, 8px);
+      opacity: 0.2;
+    }
+    .ghost-1 {
+      transform: rotate(4deg) translate(12px, 4px);
+      opacity: 0.38;
+    }
+
+    /* Main PDF document */
+    .pdf-doc {
+      position: absolute;
+      inset: 0;
+      border-radius: 5px;
+      background: linear-gradient(135deg, #5b1a9a 0%, #b020a8 45%, #d91a82 80%, #e8156a 100%);
+      overflow: hidden;
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.3),
+        0 20px 60px -10px rgba(0,0,0,0.6),
+        0 40px 80px -20px rgba(180,20,120,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      transform: rotate(2deg);
+      transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), box-shadow 0.4s ease;
+    }
+    .pdf-doc.celebrate {
+      transform: rotate(0deg) scale(1.04);
+      box-shadow:
+        0 0 0 3px rgba(255,28,192,0.5),
+        0 30px 80px -10px rgba(255,28,192,0.4),
+        0 50px 100px -20px rgba(0,0,0,0.6);
+    }
+
+    /* Diagonal stripes overlay */
+    .pdf-stripes {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(255,255,255,0.055) 0px,
+        rgba(255,255,255,0.055) 1px,
+        transparent 1px,
+        transparent 11px
+      );
+      /* Clip to right half */
+      -webkit-mask: linear-gradient(90deg, transparent 30%, black 70%);
+      mask: linear-gradient(90deg, transparent 30%, black 70%);
+    }
+
+    /* PDF content */
+    .pdf-content {
+      position: relative;
+      z-index: 1;
+      padding: 28px 26px 24px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pdf-eyebrow {
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 12px;
+    }
+
+    .pdf-title {
+      font-family: 'Oswald', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -1px;
+      line-height: 1;
+      color: white;
+      margin-bottom: 14px;
+    }
+
+    .pdf-desc {
+      font-family: 'Open Sans', sans-serif;
+      font-size: 0.55rem;
+      line-height: 1.65;
+      color: rgba(255,255,255,0.65);
+      max-width: 75%;
+    }
+
+    .pdf-logo {
+      margin-top: auto;
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.55rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    /* Loading pulse on the doc */
+    .doc-stack.pulsing .pdf-doc {
+      animation: doc-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes doc-pulse {
+      0%, 100% { opacity: 1; transform: rotate(2deg) scale(1); }
+      50%       { opacity: 0.7; transform: rotate(2deg) scale(0.97); }
+    }
+
+    /* ── PREVIEW CAPTION ─────────────────────── */
+    .preview-caption {
+      font-family: 'Oswald', sans-serif;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.22);
+    }
+
+    /* ── RESPONSIVE ──────────────────────────── */
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .preview-panel {
+        height: 380px;
+        position: static;
+        order: -1; /* Show preview above form on mobile */
+      }
+      .doc-stack {
+        width: 200px;
+        height: calc(200px * 1.414);
+      }
+      .panel-content {
+        padding: 44px 32px;
+      }
+      .logo { margin-bottom: 40px; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ══════════════════════════════════════════
+       LEFT — FORM PANEL
+  ═══════════════════════════════════════════ -->
+  <div class="form-panel" id="formPanel">
+    <div class="grain-layer"></div>
+
+    <div class="panel-content">
+
+      <!-- Logo -->
+      <div class="logo">Sleeping <span class="grad">Giant</span> Media</div>
+
+      <!-- ── FORM CONTENT (idle state) ── -->
+      <div class="form-content" id="formContent">
+
+        <div class="eyebrow-badge">Powered by AI</div>
+
+        <h1 class="title">
+          PDF<br>
+          <span class="grad">Builder</span>
+        </h1>
+
+        <p class="subtitle">
+          Describe your topic below. We'll write the content and deliver a branded PDF straight to your inbox.
+        </p>
+
+        <form id="mainForm" novalidate>
+
+          <div class="field">
+            <label for="briefText">Your Brief</label>
+            <textarea
+              id="briefText"
+              name="text"
+              placeholder="What should your PDF cover? Describe the topic, audience, and any key points you'd like included…"
+              required
+            ></textarea>
+          </div>
+
+          <div class="field">
+            <label for="emailInput">Your Email Address</label>
+            <input
+              type="email"
+              id="emailInput"
+              name="email"
+              placeholder="you@company.com"
+              required
+            >
+          </div>
+
+          <div class="error-banner" id="errorBanner">
+            Something went wrong — please check your connection and try again.
+          </div>
+
+          <button type="submit" id="submitBtn" class="btn-submit">
+            <span class="btn-text">Generate My PDF →</span>
+            <span class="spinner" id="spinner"></span>
+            <span class="btn-loading-text">Generating your PDF…</span>
+          </button>
+
+        </form>
+      </div>
+
+      <!-- ── SUCCESS CONTENT ── -->
+      <div class="success-content" id="successContent">
+
+        <div class="success-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="32" fill="url(#success-grad)"/>
+            <path d="M19 32l9.5 9.5L45 22" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="success-grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#ff1cc0"/>
+                <stop offset="100%" stop-color="#7f5fce"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <h2>Your PDF is<br>on its way!</h2>
+        <p>Check your inbox — your branded PDF should arrive within a few minutes.</p>
+
+        <button class="btn-restart" onclick="restart()">Build Another PDF</button>
+
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       RIGHT — PREVIEW PANEL
+  ═══════════════════════════════════════════ -->
+  <div class="preview-panel">
+    <div class="preview-inner">
+
+      <div class="doc-stack" id="docStack">
+
+        <!-- Stacked ghost pages (depth effect) -->
+        <div class="pdf-ghost ghost-2"></div>
+        <div class="pdf-ghost ghost-1"></div>
+
+        <!-- Main document mockup -->
+        <div class="pdf-doc" id="pdfDoc">
+          <div class="pdf-stripes"></div>
+          <div class="pdf-content">
+            <div class="pdf-eyebrow">Giant Resource Download</div>
+            <h2 class="pdf-title">2026:<br>The Year<br>Marketing<br>Became<br>Answer-Led</h2>
+            <p class="pdf-desc">
+              In 2026, customers aren't clicking through lists of links, they're being given answers.
+              This guide breaks down how AI-driven search is redefining visibility.
+            </p>
+            <div class="pdf-logo">Sleeping Giant Media</div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="preview-caption">↑ Example output</p>
+
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT — WEBHOOK + STATE MANAGEMENT
+═══════════════════════════════════════════ -->
+<script>
+  const WEBHOOK_URL = 'https://n8n.sleepingaigiant.com/webhook-test/dad6f0a7-8f12-451c-908d-76bc8bb7181d';
+
+  const formPanel    = document.getElementById('formPanel');
+  const formContent  = document.getElementById('formContent');
+  const successContent = document.getElementById('successContent');
+  const mainForm     = document.getElementById('mainForm');
+  const submitBtn    = document.getElementById('submitBtn');
+  const errorBanner  = document.getElementById('errorBanner');
+  const docStack     = document.getElementById('docStack');
+  const pdfDoc       = document.getElementById('pdfDoc');
+  const briefText    = document.getElementById('briefText');
+  const emailInput   = document.getElementById('emailInput');
+
+  function setLoading(on) {
+    formPanel.classList.toggle('loading', on);
+    submitBtn.disabled = on;
+    briefText.disabled = on;
+    emailInput.disabled = on;
+    docStack.classList.toggle('pulsing', on);
+    if (on) errorBanner.classList.remove('visible');
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg || 'Something went wrong — please try again.';
+    errorBanner.classList.add('visible');
+  }
+
+  function showSuccess() {
+    formContent.classList.add('hidden');
+    successContent.classList.add('visible');
+    pdfDoc.classList.add('celebrate');
+    docStack.classList.remove('pulsing');
+  }
+
+  function restart() {
+    formContent.classList.remove('hidden');
+    successContent.classList.remove('visible');
+    pdfDoc.classList.remove('celebrate');
+    mainForm.reset();
+    errorBanner.classList.remove('visible');
+    setLoading(false);
+  }
+
+  mainForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const text  = briefText.value.trim();
+    const email = emailInput.value.trim();
+
+    if (!text) {
+      showError('Please describe your topic before submitting.');
+      briefText.focus();
+      return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showError('Please enter a valid email address.');
+      emailInput.focus();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, email }),
+      });
+
+      if (response.ok || response.status === 200) {
+        showSuccess();
+      } else {
+        setLoading(false);
+        showError(`Request failed (${response.status}) — please try again.`);
+      }
+    } catch (err) {
+      setLoading(false);
+      if (err.name === 'TypeError') {
+        showError('Could not reach the server — check your connection and try again.');
+      } else {
+        showError('Something went wrong — please try again.');
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

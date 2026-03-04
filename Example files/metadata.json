@@ -1,0 +1,5 @@
+{
+  "name": "WikiAudit - Compliance Dashboard",
+  "description": "A Wikipedia policy compliance auditor for sourcing. It evaluates sources against WP:RS, WP:RSP, and WP:NPOV using Google Search grounding to verify community consensus.",
+  "requestFramePermissions": []
+}

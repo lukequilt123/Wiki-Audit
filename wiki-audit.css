@@ -1,0 +1,872 @@
+/* ============================================================
+   WikiAudit — Page-Specific Styles
+   Extends styles.css (SGM Design System)
+   ============================================================ */
+
+/* ─── Password Gate ──────────────────────────────────────────── */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.auth-gate.auth-gate--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.auth-gate-inner {
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+  padding: 0 24px;
+}
+
+.auth-logo {
+  margin-bottom: 20px;
+}
+
+.auth-logo svg {
+  display: inline !important;
+}
+
+.auth-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.auth-subtitle {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 28px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-input {
+  width: 100%;
+  text-align: center;
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+
+.auth-error {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #f87171;
+  margin: -4px 0 0;
+}
+
+.auth-btn {
+  width: 100%;
+}
+
+/* ─── Button Base Styles (from STYLE-GUIDE.md) ──────────────── */
+/* These are defined in the guide but missing from styles.css    */
+.btn-gradient {
+  padding: 12px 28px;
+  background: var(--brand-gradient);
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-gradient:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(255, 28, 192, 0.3);
+}
+
+.btn-outline {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  border-color: var(--brand-purple);
+  background: rgba(127, 95, 206, 0.1);
+  box-shadow: 0 0 20px rgba(127, 95, 206, 0.15);
+}
+
+/* ─── Layout Grid ────────────────────────────────────────────── */
+.audit-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.audit-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: calc(var(--nav-height) + 24px);
+}
+
+/* Stagger sidebar cards */
+.audit-sidebar > .fade-in:nth-child(1) { animation-delay: 0.08s; }
+.audit-sidebar > .fade-in:nth-child(2) { animation-delay: 0.16s; }
+
+/* ─── Form Card ──────────────────────────────────────────────── */
+.audit-form-card {
+  padding: 28px;
+  /* Disable hover lift on form card — it's interactive, not a link */
+  transform: none !important;
+}
+
+.audit-form-card:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-glass);
+}
+
+.field-group {
+  margin-bottom: 20px;
+}
+
+.field-group label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.field-hint {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+/* Full-width inputs within form */
+.audit-form-card .filter-control {
+  width: 100%;
+  display: block;
+}
+
+.audit-textarea {
+  min-height: 160px;
+  resize: vertical;
+  line-height: 1.6;
+  font-family: var(--font-body);
+}
+
+/* Placeholder styling for dark theme */
+.audit-form-card .filter-control::placeholder {
+  color: var(--text-muted);
+}
+
+.audit-submit-btn {
+  width: 100%;
+  padding: 14px 28px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.audit-submit-btn .btn-text {
+  display: inline;
+}
+
+.audit-submit-btn .btn-spinner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mini-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: waSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes waSpin {
+  to { transform: rotate(360deg); }
+}
+
+.audit-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.form-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: #f87171;
+  line-height: 1.5;
+}
+
+/* ─── Reference Guide Card ───────────────────────────────────── */
+.ref-guide-card {
+  padding: 24px 28px;
+  /* No hover lift on reference card either */
+  transform: none !important;
+}
+
+.ref-guide-card:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-glass);
+}
+
+.tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.tier-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tier-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.tier-dot--approved { background: #34d399; }
+.tier-dot--caution  { background: #fbbf24; }
+.tier-dot--rejected { background: #f87171; }
+
+.tier-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.tier-desc {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.policy-links {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.policy-links-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.policy-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.policy-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(127, 95, 206, 0.1);
+  border: 1px solid rgba(127, 95, 206, 0.2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #a78bfa;
+  transition: all 0.2s ease;
+}
+
+.policy-tag:hover {
+  background: rgba(127, 95, 206, 0.18);
+  border-color: rgba(127, 95, 206, 0.35);
+}
+
+/* ─── Idle State ─────────────────────────────────────────────── */
+.idle-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 60px 40px;
+  text-align: center;
+  /* Override glass-card's solid border with dashed for empty state */
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* Disable hover lift on idle panel */
+.idle-panel:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.idle-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(127, 95, 206, 0.08);
+  border: 1px solid rgba(127, 95, 206, 0.15);
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+/* Fix SVG display inside idle icon */
+.idle-icon svg {
+  display: inline;
+}
+
+.idle-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.idle-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ─── Loading State ──────────────────────────────────────────── */
+/* Disable hover on loading panel */
+#loadingState:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-glass);
+}
+
+.state-text-sub {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: -8px;
+}
+
+/* ─── Error State ────────────────────────────────────────────── */
+#errorState {
+  margin: 0 auto;
+}
+
+.audit-retry-btn {
+  padding: 10px 24px;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* ─── Results Header ─────────────────────────────────────────── */
+.results-header-card {
+  padding: 24px 28px;
+  margin-bottom: 16px;
+}
+
+/* Disable hover on results header */
+.results-header-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-glass);
+}
+
+.results-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.results-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.results-meta {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.audit-csv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-size: 12px;
+}
+
+/* Fix inline SVG inside buttons */
+.audit-csv-btn svg,
+.channel-status-badge svg {
+  display: inline;
+  flex-shrink: 0;
+}
+
+/* ─── Results Table ──────────────────────────────────────────── */
+.results-table-card {
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+/* Disable hover on table card */
+.results-table-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-glass);
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#resultsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#resultsTable thead {
+  background: var(--bg-base);
+}
+
+#resultsTable th {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-glass);
+  white-space: nowrap;
+}
+
+#resultsTable td {
+  padding: 18px 20px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+#resultsTable tbody tr {
+  transition: background 0.15s ease;
+}
+
+#resultsTable tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+
+#resultsTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Source link */
+.source-link {
+  color: #a78bfa;
+  font-weight: 500;
+  word-break: break-all;
+  transition: color 0.2s ease;
+}
+
+.source-link:hover {
+  color: var(--brand-pink);
+}
+
+/* ─── Status Badges ──────────────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
+.status-badge--approved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-badge--caution {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.status-badge--rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-badge--unknown {
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-badge--approved .status-dot { background: #34d399; }
+.status-badge--caution  .status-dot { background: #fbbf24; }
+.status-badge--rejected .status-dot { background: #f87171; }
+.status-badge--unknown  .status-dot { background: #9ca3af; }
+
+/* ─── Copy Wiki-Ref Button ───────────────────────────────────── */
+.action-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-copy-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(127, 95, 206, 0.1);
+  border: 1px solid rgba(127, 95, 206, 0.2);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #a78bfa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.btn-copy-ref:hover {
+  background: rgba(127, 95, 206, 0.2);
+  border-color: var(--brand-purple);
+  transform: translateY(-1px);
+}
+
+.btn-copy-ref.copied {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+/* ─── Raw Fallback ───────────────────────────────────────────── */
+.raw-fallback {
+  padding: 24px;
+}
+
+.raw-fallback-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fbbf24;
+  margin-bottom: 16px;
+}
+
+/* Fix inline SVGs in warnings */
+.raw-fallback-warning svg {
+  display: inline;
+  flex-shrink: 0;
+}
+
+.raw-text-block {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+}
+
+/* ─── Grounding Sources ──────────────────────────────────────── */
+.grounding-card {
+  padding: 24px 28px;
+}
+
+/* Disable hover on grounding card */
+.grounding-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-glass);
+}
+
+.grounding-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.grounding-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.grounding-link:hover {
+  border-color: rgba(127, 95, 206, 0.3);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.grounding-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(127, 95, 206, 0.1);
+  flex-shrink: 0;
+}
+
+.grounding-link-icon svg {
+  width: 14px;
+  height: 14px;
+  color: #a78bfa;
+  display: inline;
+}
+
+.grounding-link-text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.grounding-link:hover .grounding-link-text {
+  color: #a78bfa;
+}
+
+/* ─── Fade-In for Results Rows ───────────────────────────────── */
+#resultsTable tbody tr.fade-in {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fadeInStagger 0.4s ease-out forwards;
+}
+
+/* ─── Responsive: Tablet ─────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .audit-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .results-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+/* ─── Responsive: Mobile ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .audit-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-form-card {
+    padding: 22px;
+  }
+
+  .ref-guide-card {
+    padding: 20px 22px;
+  }
+
+  .results-header-card {
+    padding: 20px 22px;
+  }
+
+  .idle-panel {
+    min-height: 280px;
+    padding: 40px 24px;
+  }
+
+  /* Table to card layout */
+  #resultsTable thead {
+    display: none;
+  }
+
+  #resultsTable,
+  #resultsTable tbody,
+  #resultsTable tr,
+  #resultsTable td {
+    display: block;
+    width: 100%;
+  }
+
+  #resultsTable tbody tr {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  #resultsTable tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  #resultsTable td {
+    padding: 6px 0;
+    border: none;
+  }
+
+  #resultsTable td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .grounding-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .results-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
