@@ -7,7 +7,7 @@
   'use strict';
 
   // ── CONFIGURATION ────────────────────────────────────────────
-  const GEMINI_MODEL = 'gemini-2.5-flash-preview-05-20';
+  const GEMINI_MODEL = 'gemini-2.5-flash';
   const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
   const PROXY_URL = 'https://wikiaudit-proxy.luke-bcf.workers.dev';
 

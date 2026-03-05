@@ -75,7 +75,7 @@ export default {
     try {
       // Parse the incoming request
       const body = await request.json();
-      const model = body.model || 'gemini-2.5-flash-preview-05-20';
+      const model = body.model || 'gemini-2.5-flash';
 
       // Remove model from the body (it's used in the URL)
       delete body.model;
