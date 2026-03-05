@@ -58,6 +58,7 @@ Present the findings as a clean Markdown Table with these specific headers:
     els = {
       form: document.getElementById('auditForm'),
       topicInput: document.getElementById('topicInput'),
+      contextUrlInput: document.getElementById('contextUrlInput'),
       sourcesInput: document.getElementById('sourcesInput'),
       submitBtn: document.getElementById('submitBtn'),
       formError: document.getElementById('formError'),
@@ -141,6 +142,7 @@ Present the findings as a clean Markdown Table with these specific headers:
     // Toggle form disabled state
     var isLoading = state === 'loading';
     if (els.topicInput) els.topicInput.disabled = isLoading;
+    if (els.contextUrlInput) els.contextUrlInput.disabled = isLoading;
     if (els.sourcesInput) els.sourcesInput.disabled = isLoading;
     if (els.submitBtn) {
       els.submitBtn.disabled = isLoading;
@@ -162,16 +164,52 @@ Present the findings as a clean Markdown Table with these specific headers:
     els.formError.style.display = 'none';
   }
 
+  // ── CONTEXT URL CLASSIFICATION ──────────────────────────────
+  function classifyContextUrl(url) {
+    if (!url) return null;
+    try {
+      var parsed = new URL(url);
+      var host = parsed.hostname.toLowerCase();
+      if (host.endsWith('.wikipedia.org') && parsed.pathname.startsWith('/wiki/')) {
+        return { type: 'wikipedia', url: url };
+      }
+      return { type: 'website', url: url };
+    } catch (e) {
+      return { type: 'website', url: url };
+    }
+  }
+
   // ── GEMINI API CALL ──────────────────────────────────────────
-  async function auditSources(topic, sources) {
+  async function auditSources(topic, contextUrl, sources) {
     var apiKey = getApiKey();
     var useProxy = !apiKey;
+
+    var context = classifyContextUrl(contextUrl);
+    var contextBlock = '';
+
+    if (context) {
+      if (context.type === 'wikipedia') {
+        contextBlock = [
+          '',
+          '**Existing Wikipedia Article:** ' + context.url,
+          'Use your Google Search tool to review this Wikipedia article. Assess how each source below relates to the existing article content, and whether it adds value or duplicates existing references.',
+          ''
+        ].join('\n');
+      } else {
+        contextBlock = [
+          '',
+          '**Subject Context URL:** ' + context.url,
+          'Use your Google Search tool to review this website. Use the context about this subject/organization to better assess the relevance and reliability of the sources below.',
+          ''
+        ].join('\n');
+      }
+    }
 
     var prompt = [
       '**Audit Request:**',
       '',
       '**Subject/Article Topic:** ' + (topic || 'Not specified (General Audit)'),
-      '',
+      contextBlock,
       '**Sources to Audit:**',
       sources,
       '',
@@ -227,14 +265,21 @@ Present the findings as a clean Markdown Table with these specific headers:
     if (data.candidates && data.candidates[0]) {
       var candidate = data.candidates[0];
       if (candidate.content && candidate.content.parts) {
-        text = candidate.content.parts.map(function (p) { return p.text || ''; }).join('');
+        // Collect only text parts (skip functionCall/functionResponse parts)
+        var textParts = candidate.content.parts.filter(function (p) { return typeof p.text === 'string'; });
+        text = textParts.map(function (p) { return p.text; }).join('');
       }
       if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks) {
         groundingChunks = candidate.groundingMetadata.groundingChunks;
       }
+      // Also check for grounding in search entry point
+      if (candidate.groundingMetadata && candidate.groundingMetadata.searchEntryPoint) {
+        console.log('Search grounding used:', candidate.groundingMetadata.searchEntryPoint);
+      }
     }
 
     console.log('Raw Gemini Output:', text);
+    console.log('Response structure:', JSON.stringify(data.candidates && data.candidates[0] && data.candidates[0].content, null, 2));
 
     return {
       markdownTable: text,
@@ -244,8 +289,14 @@ Present the findings as a clean Markdown Table with these specific headers:
   }
 
   // ── MARKDOWN TABLE PARSING ───────────────────────────────────
+  function stripCodeFences(text) {
+    // Remove ```markdown ... ``` or ``` ... ``` wrappers
+    return text.replace(/```(?:markdown|md)?\s*\n([\s\S]*?)```/g, '$1');
+  }
+
   function extractMarkdownTable(text) {
     if (!text) return '';
+    text = stripCodeFences(text);
     var lines = text.split('\n');
     var tableLines = [];
     var insideTable = false;
@@ -254,17 +305,31 @@ Present the findings as a clean Markdown Table with these specific headers:
       var trimmed = lines[i].trim();
       var lower = trimmed.toLowerCase();
 
+      // Detect header row: must contain | and a source/url keyword
       if (!insideTable && trimmed.includes('|') && (lower.includes('source') || lower.includes('url'))) {
         insideTable = true;
         tableLines.push(trimmed);
         continue;
       }
       if (insideTable) {
-        if (trimmed.startsWith('|')) {
+        if (trimmed.startsWith('|') || /^[|\s\-:]+$/.test(trimmed)) {
           tableLines.push(trimmed);
         } else if (trimmed === '') {
+          // Skip blank lines within the table — don't break
           continue;
         } else {
+          // Non-table line: check if more table rows follow (Gemini sometimes
+          // inserts a note line between rows). Look ahead up to 3 lines.
+          var resumedTable = false;
+          for (var k = i + 1; k < Math.min(i + 4, lines.length); k++) {
+            if (lines[k].trim().startsWith('|')) {
+              resumedTable = true;
+              break;
+            }
+          }
+          if (resumedTable) {
+            continue; // skip the stray line, keep collecting
+          }
           break;
         }
       }
@@ -273,7 +338,36 @@ Present the findings as a clean Markdown Table with these specific headers:
     return tableLines.length === 0 ? text : tableLines.join('\n');
   }
 
+  function splitTableRow(line) {
+    // Split on | but respect markdown links [text](url) which may contain |
+    var cells = [];
+    var current = '';
+    var inBracket = 0;
+    var inParen = 0;
+
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (ch === '[') inBracket++;
+      else if (ch === ']') inBracket = Math.max(0, inBracket - 1);
+      else if (ch === '(') inParen++;
+      else if (ch === ')') inParen = Math.max(0, inParen - 1);
+      else if (ch === '|' && inBracket === 0 && inParen === 0) {
+        cells.push(current.trim());
+        current = '';
+        continue;
+      }
+      current += ch;
+    }
+    cells.push(current.trim());
+
+    // Remove leading/trailing empty cells from pipe borders
+    if (cells.length > 0 && cells[0] === '') cells.shift();
+    if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
+    return cells;
+  }
+
   function parseTableRows(markdown) {
+    markdown = stripCodeFences(markdown);
     var lines = markdown.trim().split('\n').filter(function (l) { return l.trim().length > 0; });
     var headerIndex = -1;
 
@@ -286,17 +380,18 @@ Present the findings as a clean Markdown Table with these specific headers:
 
     if (headerIndex === -1) return null;
 
-    var headers = lines[headerIndex].split('|').map(function (h) { return h.trim(); }).filter(function (h) { return h.length > 0; });
+    var headers = splitTableRow(lines[headerIndex]);
 
     var rows = [];
     for (var j = headerIndex + 1; j < lines.length; j++) {
-      var line = lines[j];
+      var line = lines[j].trim();
       if (!line.includes('|') || /^[|\s\-:]+$/.test(line)) continue;
 
-      var cells = line.split('|').map(function (c) { return c.trim(); });
-      if (cells[0] === '') cells.shift();
-      if (cells.length > 0 && cells[cells.length - 1] === '') cells.pop();
-      rows.push(cells);
+      var cells = splitTableRow(line);
+      // Only add rows that have a reasonable number of cells
+      if (cells.length >= 2) {
+        rows.push(cells);
+      }
     }
 
     return rows.length > 0 ? { headers: headers, rows: rows } : null;
@@ -348,7 +443,9 @@ Present the findings as a clean Markdown Table with these specific headers:
     var parsed = parseTableRows(markdown);
 
     if (!parsed) {
-      // Show raw fallback
+      // Show raw fallback with debug info
+      console.warn('Table parsing failed. Raw text length:', (data.rawText || '').length);
+      console.warn('Extracted markdown:', markdown);
       els.resultsTable.querySelector('thead').innerHTML = '';
       els.resultsTable.querySelector('tbody').innerHTML = '';
       els.rawFallback.style.display = '';
@@ -557,12 +654,20 @@ Present the findings as a clean Markdown Table with these specific headers:
       return;
     }
 
+    // Validate context URL if provided
+    var contextUrl = els.contextUrlInput ? els.contextUrlInput.value.trim() : '';
+    if (contextUrl && !contextUrl.match(/^https?:\/\/.+/)) {
+      showFormError('Context URL must start with http:// or https://');
+      els.contextUrlInput.focus();
+      return;
+    }
+
     // API key check is optional — if no local key, the proxy handles it
 
     setState('loading');
 
     try {
-      var result = await auditSources(els.topicInput.value.trim(), sources);
+      var result = await auditSources(els.topicInput.value.trim(), contextUrl, sources);
       currentResult = result;
       renderResults(result);
       setState('results');
