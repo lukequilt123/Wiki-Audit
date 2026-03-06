@@ -180,51 +180,41 @@ Present the findings as a clean Markdown Table with these specific headers:
   }
 
   // ── GEMINI API CALL ──────────────────────────────────────────
-  async function auditSources(topic, contextUrl, sources) {
+  var BATCH_SIZE = 5; // Max sources per API call to avoid token exhaustion
+
+  function buildContextBlock(contextUrl) {
+    var context = classifyContextUrl(contextUrl);
+    if (!context) return '';
+    if (context.type === 'wikipedia') {
+      return [
+        '',
+        '**Existing Wikipedia Article:** ' + context.url,
+        'Use your Google Search tool to review this Wikipedia article. Assess how each source below relates to the existing article content, and whether it adds value or duplicates existing references.',
+        ''
+      ].join('\n');
+    }
+    return [
+      '',
+      '**Subject Context URL:** ' + context.url,
+      'Use your Google Search tool to review this website. Use the context about this subject/organization to better assess the relevance and reliability of the sources below.',
+      ''
+    ].join('\n');
+  }
+
+  async function callGemini(promptText) {
     var apiKey = getApiKey();
     var useProxy = !apiKey;
-
-    var context = classifyContextUrl(contextUrl);
-    var contextBlock = '';
-
-    if (context) {
-      if (context.type === 'wikipedia') {
-        contextBlock = [
-          '',
-          '**Existing Wikipedia Article:** ' + context.url,
-          'Use your Google Search tool to review this Wikipedia article. Assess how each source below relates to the existing article content, and whether it adds value or duplicates existing references.',
-          ''
-        ].join('\n');
-      } else {
-        contextBlock = [
-          '',
-          '**Subject Context URL:** ' + context.url,
-          'Use your Google Search tool to review this website. Use the context about this subject/organization to better assess the relevance and reliability of the sources below.',
-          ''
-        ].join('\n');
-      }
-    }
-
-    var prompt = [
-      '**Audit Request:**',
-      '',
-      '**Subject/Article Topic:** ' + (topic || 'Not specified (General Audit)'),
-      contextBlock,
-      '**Sources to Audit:**',
-      sources,
-      '',
-      'CRITICAL: Output ONLY the Markdown Table. Do not write any introductory summary, preamble, or conclusion text. Start the response immediately with the markdown header row.'
-    ].join('\n');
 
     var body = {
       system_instruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }]
       },
       contents: [{
-        parts: [{ text: prompt }]
+        parts: [{ text: promptText }]
       }],
       generationConfig: {
-        temperature: 0.1
+        temperature: 0.1,
+        maxOutputTokens: 8192
       },
       tools: [{
         google_search: {}
@@ -234,7 +224,6 @@ Present the findings as a clean Markdown Table with these specific headers:
     var url, response;
 
     if (useProxy) {
-      // Use Cloudflare Worker proxy (API key stored server-side)
       body.model = GEMINI_MODEL;
       response = await fetch(PROXY_URL, {
         method: 'POST',
@@ -242,7 +231,6 @@ Present the findings as a clean Markdown Table with these specific headers:
         body: JSON.stringify(body)
       });
     } else {
-      // Direct Gemini API call (local dev with config.js)
       url = GEMINI_API_URL + '/' + GEMINI_MODEL + ':generateContent?key=' + apiKey;
       response = await fetch(url, {
         method: 'POST',
@@ -262,29 +250,169 @@ Present the findings as a clean Markdown Table with these specific headers:
     var text = '';
     var groundingChunks = [];
 
-    if (data.candidates && data.candidates[0]) {
-      var candidate = data.candidates[0];
-      if (candidate.content && candidate.content.parts) {
-        // Collect only text parts (skip functionCall/functionResponse parts)
-        var textParts = candidate.content.parts.filter(function (p) { return typeof p.text === 'string'; });
-        text = textParts.map(function (p) { return p.text; }).join('');
-      }
-      if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks) {
-        groundingChunks = candidate.groundingMetadata.groundingChunks;
-      }
-      // Also check for grounding in search entry point
-      if (candidate.groundingMetadata && candidate.groundingMetadata.searchEntryPoint) {
-        console.log('Search grounding used:', candidate.groundingMetadata.searchEntryPoint);
+    // Check for prompt-level blocks
+    if (data.promptFeedback && data.promptFeedback.blockReason) {
+      throw new Error('Request blocked by safety filter: ' + data.promptFeedback.blockReason);
+    }
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('No response candidates received from Gemini. The request may have been filtered.');
+    }
+
+    var candidate = data.candidates[0];
+
+    // Check finish reason for problems
+    if (candidate.finishReason === 'SAFETY') {
+      throw new Error('Response blocked by Gemini safety filter.');
+    }
+    if (candidate.finishReason === 'RECITATION') {
+      throw new Error('Response blocked due to recitation policy.');
+    }
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      console.warn('Gemini response was truncated (MAX_TOKENS). Results may be incomplete.');
+    }
+
+    if (candidate.content && candidate.content.parts) {
+      // Filter: only text parts, exclude "thought" parts (Gemini 2.5 thinking)
+      var textParts = candidate.content.parts.filter(function (p) {
+        return typeof p.text === 'string' && !p.thought;
+      });
+      text = textParts.map(function (p) { return p.text; }).join('');
+
+      // If no non-thought text, fall back to all text parts
+      if (!text.trim()) {
+        var allText = candidate.content.parts
+          .filter(function (p) { return typeof p.text === 'string'; })
+          .map(function (p) { return p.text; }).join('');
+        if (allText.trim()) {
+          console.warn('Only thought-text found, using it as fallback.');
+          text = allText;
+        }
       }
     }
 
-    console.log('Raw Gemini Output:', text);
-    console.log('Response structure:', JSON.stringify(data.candidates && data.candidates[0] && data.candidates[0].content, null, 2));
+    if (candidate.groundingMetadata && candidate.groundingMetadata.groundingChunks) {
+      groundingChunks = candidate.groundingMetadata.groundingChunks;
+    }
+
+    if (!text.trim()) {
+      var partTypes = (candidate.content && candidate.content.parts || [])
+        .map(function (p) { return Object.keys(p).join(','); });
+      throw new Error(
+        'Gemini returned empty text. Part types: [' + partTypes.join('; ') +
+        ']. Finish reason: ' + (candidate.finishReason || 'unknown') +
+        '. Try reducing the number of sources.'
+      );
+    }
+
+    console.log('Gemini output length:', text.length);
+
+    return { text: text, groundingChunks: groundingChunks };
+  }
+
+  async function auditSources(topic, contextUrl, sources) {
+    var contextBlock = buildContextBlock(contextUrl);
+
+    // Split sources into lines, filter blanks
+    var sourceLines = sources.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+
+    // If small enough, do a single request
+    if (sourceLines.length <= BATCH_SIZE) {
+      var prompt = [
+        '**Audit Request:**',
+        '',
+        '**Subject/Article Topic:** ' + (topic || 'Not specified (General Audit)'),
+        contextBlock,
+        '**Sources to Audit:**',
+        sourceLines.join('\n'),
+        '',
+        'CRITICAL: Output ONLY the Markdown Table. Do not write any introductory summary, preamble, or conclusion text. Start the response immediately with the markdown header row.'
+      ].join('\n');
+
+      var result = await callGemini(prompt);
+      return {
+        markdownTable: result.text,
+        rawText: result.text,
+        groundingChunks: result.groundingChunks
+      };
+    }
+
+    // Batch processing for large lists
+    var batches = [];
+    for (var i = 0; i < sourceLines.length; i += BATCH_SIZE) {
+      batches.push(sourceLines.slice(i, i + BATCH_SIZE));
+    }
+
+    var allTableRows = [];
+    var allGrounding = [];
+    var headerLine = '';
+    var separatorLine = '';
+
+    for (var b = 0; b < batches.length; b++) {
+      // Update loading text with batch progress
+      var loadingText = document.querySelector('.state-text');
+      if (loadingText) {
+        loadingText.textContent = 'Analysing sources — batch ' + (b + 1) + ' of ' + batches.length + '...';
+      }
+
+      var batchPrompt = [
+        '**Audit Request (Batch ' + (b + 1) + ' of ' + batches.length + '):**',
+        '',
+        '**Subject/Article Topic:** ' + (topic || 'Not specified (General Audit)'),
+        contextBlock,
+        '**Sources to Audit:**',
+        batches[b].join('\n'),
+        '',
+        'CRITICAL: Output ONLY the Markdown Table. Do not write any introductory summary, preamble, or conclusion text. Start the response immediately with the markdown header row.'
+      ].join('\n');
+
+      var batchResult = await callGemini(batchPrompt);
+      allGrounding = allGrounding.concat(batchResult.groundingChunks || []);
+
+      // Parse the batch table and extract rows
+      var batchTable = extractMarkdownTable(batchResult.text);
+      var batchParsed = parseTableRows(batchTable);
+      if (batchParsed) {
+        if (!headerLine) {
+          // Capture header and separator from first batch
+          var batchLines = batchTable.split('\n');
+          for (var li = 0; li < batchLines.length; li++) {
+            var ln = batchLines[li].trim();
+            if (ln.includes('|') && (ln.toLowerCase().includes('source') || ln.toLowerCase().includes('url'))) {
+              headerLine = ln;
+              // Next line should be separator
+              if (li + 1 < batchLines.length && /^[|\s\-:]+$/.test(batchLines[li + 1].trim())) {
+                separatorLine = batchLines[li + 1].trim();
+              }
+              break;
+            }
+          }
+        }
+        // Collect data rows as raw markdown lines
+        var batchDataLines = batchTable.split('\n').filter(function (l) {
+          var t = l.trim();
+          if (!t.includes('|')) return false;
+          if (/^[|\s\-:]+$/.test(t)) return false;
+          if (t.toLowerCase().includes('source') && t.toLowerCase().includes('status')) return false;
+          return true;
+        });
+        allTableRows = allTableRows.concat(batchDataLines);
+      } else {
+        // Batch didn't parse into a table — append raw text as fallback
+        console.warn('Batch ' + (b + 1) + ' did not return a parseable table.');
+        allTableRows.push('| ' + batches[b].join(', ') + ' | Parse error | — | — | Retry this batch |');
+      }
+    }
+
+    // Reassemble combined table
+    var combinedTable = headerLine + '\n' +
+      (separatorLine || '|---|---|---|---|---|') + '\n' +
+      allTableRows.join('\n');
 
     return {
-      markdownTable: text,
-      rawText: text,
-      groundingChunks: groundingChunks
+      markdownTable: combinedTable,
+      rawText: combinedTable,
+      groundingChunks: allGrounding
     };
   }
 
