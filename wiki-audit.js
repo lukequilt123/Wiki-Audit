@@ -388,15 +388,24 @@ Present the findings as a clean Markdown Table with these specific headers:
             }
           }
         }
-        // Collect data rows as raw markdown lines
-        var batchDataLines = batchTable.split('\n').filter(function (l) {
-          var t = l.trim();
-          if (!t.includes('|')) return false;
-          if (/^[|\s\-:]+$/.test(t)) return false;
-          if (t.toLowerCase().includes('source') && t.toLowerCase().includes('status')) return false;
-          return true;
-        });
-        allTableRows = allTableRows.concat(batchDataLines);
+        // Collect data rows from parsed result (avoids fragile header-detection filters)
+        var batchDataLines = batchTable.split('\n');
+        // Find where data rows start: skip header and separator
+        var dataStartIndex = 0;
+        for (var di = 0; di < batchDataLines.length; di++) {
+          var dl = batchDataLines[di].trim();
+          if (/^[|\s\-:]+$/.test(dl)) {
+            dataStartIndex = di + 1; // data starts after separator
+            break;
+          }
+        }
+        for (var ri = dataStartIndex; ri < batchDataLines.length; ri++) {
+          var row = batchDataLines[ri].trim();
+          if (row.includes('|') && !/^[|\s\-:]+$/.test(row)) {
+            allTableRows.push(row);
+          }
+        }
+        console.log('Batch ' + (b + 1) + ': collected ' + (allTableRows.length) + ' total rows so far');
       } else {
         // Batch didn't parse into a table — append raw text as fallback
         console.warn('Batch ' + (b + 1) + ' did not return a parseable table.');
