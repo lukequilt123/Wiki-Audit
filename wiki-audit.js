@@ -216,7 +216,7 @@ Present the findings as a clean Markdown Table with these specific headers:
         parts: [{ text: promptText }]
       }],
       generationConfig: {
-        temperature: 0.1,
+        temperature: 0,
         maxOutputTokens: 8192
       },
       tools: [{
