@@ -201,7 +201,10 @@ Present the findings as a clean Markdown Table with these specific headers:
     ].join('\n');
   }
 
-  async function callGemini(promptText) {
+  var MAX_RETRIES = 2;
+
+  async function callGemini(promptText, attempt) {
+    attempt = attempt || 0;
     var apiKey = getApiKey();
     var useProxy = !apiKey;
 
@@ -296,10 +299,15 @@ Present the findings as a clean Markdown Table with these specific headers:
     }
 
     if (!text.trim()) {
+      if (attempt < MAX_RETRIES) {
+        console.warn('Gemini returned empty text (attempt ' + (attempt + 1) + '/' + (MAX_RETRIES + 1) + '). Retrying after delay...');
+        await new Promise(function (r) { setTimeout(r, 1500 * (attempt + 1)); });
+        return callGemini(promptText, attempt + 1);
+      }
       var partTypes = (candidate.content && candidate.content.parts || [])
         .map(function (p) { return Object.keys(p).join(','); });
       throw new Error(
-        'Gemini returned empty text. Part types: [' + partTypes.join('; ') +
+        'Gemini returned empty text after ' + (MAX_RETRIES + 1) + ' attempts. Part types: [' + partTypes.join('; ') +
         ']. Finish reason: ' + (candidate.finishReason || 'unknown') +
         '. Try reducing the number of sources.'
       );
@@ -366,7 +374,17 @@ Present the findings as a clean Markdown Table with these specific headers:
         'CRITICAL: Output ONLY the Markdown Table. Do not write any introductory summary, preamble, or conclusion text. Start the response immediately with the markdown header row.'
       ].join('\n');
 
-      var batchResult = await callGemini(batchPrompt);
+      var batchResult;
+      try {
+        batchResult = await callGemini(batchPrompt);
+      } catch (batchErr) {
+        console.error('Batch ' + (b + 1) + ' failed: ' + batchErr.message);
+        // Add error rows for each source in this batch so they still appear
+        for (var ei = 0; ei < batches[b].length; ei++) {
+          allTableRows.push('| ' + batches[b][ei] + ' | ⚠️ CAUTION | — | API Error | Batch failed — re-run audit to retry |');
+        }
+        continue;
+      }
       allGrounding = allGrounding.concat(batchResult.groundingChunks || []);
 
       // Parse the batch table and extract rows
@@ -409,11 +427,16 @@ Present the findings as a clean Markdown Table with these specific headers:
       } else {
         // Batch didn't parse into a table — append raw text as fallback
         console.warn('Batch ' + (b + 1) + ' did not return a parseable table.');
-        allTableRows.push('| ' + batches[b].join(', ') + ' | Parse error | — | — | Retry this batch |');
+        for (var fi = 0; fi < batches[b].length; fi++) {
+          allTableRows.push('| ' + batches[b][fi] + ' | ⚠️ CAUTION | — | Parse Error | Response unparseable — re-run audit to retry |');
+        }
       }
     }
 
-    // Reassemble combined table
+    // Reassemble combined table — use default header if none captured (e.g. first batch failed)
+    if (!headerLine) {
+      headerLine = '| Source/URL | Reliability Status | Tier Classification | Policy Flags | Action |';
+    }
     var combinedTable = headerLine + '\n' +
       (separatorLine || '|---|---|---|---|---|') + '\n' +
       allTableRows.join('\n');
