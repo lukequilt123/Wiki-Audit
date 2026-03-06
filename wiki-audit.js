@@ -803,6 +803,36 @@ Present the findings as a clean Markdown Table with these specific headers:
   }
 
   // ── FORM SUBMIT ──────────────────────────────────────────────
+  // ── DISCLAIMER MODAL ─────────────────────────────────────────
+  var disclaimerModal = null;
+  var disclaimerProceedBtn = null;
+  var disclaimerCancelBtn = null;
+  var pendingSubmit = false;
+
+  function showDisclaimer() {
+    if (disclaimerModal) disclaimerModal.classList.remove('disclaimer--hidden');
+  }
+
+  function hideDisclaimer() {
+    if (disclaimerModal) disclaimerModal.classList.add('disclaimer--hidden');
+  }
+
+  async function runAudit() {
+    setState('loading');
+
+    var contextUrl = els.contextUrlInput ? els.contextUrlInput.value.trim() : '';
+
+    try {
+      var result = await auditSources(els.topicInput.value.trim(), contextUrl, els.sourcesInput.value.trim());
+      currentResult = result;
+      renderResults(result);
+      setState('results');
+    } catch (err) {
+      els.errorMessage.textContent = err.message || 'An unknown error occurred during the audit.';
+      setState('error');
+    }
+  }
+
   async function handleFormSubmit(e) {
     e.preventDefault();
     hideFormError();
@@ -822,19 +852,8 @@ Present the findings as a clean Markdown Table with these specific headers:
       return;
     }
 
-    // API key check is optional — if no local key, the proxy handles it
-
-    setState('loading');
-
-    try {
-      var result = await auditSources(els.topicInput.value.trim(), contextUrl, sources);
-      currentResult = result;
-      renderResults(result);
-      setState('results');
-    } catch (err) {
-      els.errorMessage.textContent = err.message || 'An unknown error occurred during the audit.';
-      setState('error');
-    }
+    // Show disclaimer modal instead of running immediately
+    showDisclaimer();
   }
 
   // ── HTML ESCAPING ────────────────────────────────────────────
@@ -898,6 +917,21 @@ Present the findings as a clean Markdown Table with these specific headers:
     cacheDom();
     updateApiKeyBadge();
     setState('idle');
+
+    // Disclaimer modal
+    disclaimerModal = document.getElementById('disclaimerModal');
+    disclaimerProceedBtn = document.getElementById('disclaimerProceed');
+    disclaimerCancelBtn = document.getElementById('disclaimerCancel');
+
+    if (disclaimerProceedBtn) {
+      disclaimerProceedBtn.addEventListener('click', function () {
+        hideDisclaimer();
+        runAudit();
+      });
+    }
+    if (disclaimerCancelBtn) {
+      disclaimerCancelBtn.addEventListener('click', hideDisclaimer);
+    }
 
     // Bind events
     if (els.form) els.form.addEventListener('submit', handleFormSubmit);

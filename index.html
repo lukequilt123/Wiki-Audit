@@ -246,9 +246,23 @@
 
     <!-- Footer -->
     <footer class="portal-footer">
-      <p class="footer-text">WikiAudit — Wikipedia Compliance Auditor — Powered by Gemini AI — v1.5.1</p>
+      <p class="footer-text">WikiAudit — Wikipedia Compliance Auditor — Powered by Gemini AI — v1.6.0</p>
     </footer>
 
+  </div>
+
+  <!-- Disclaimer Modal -->
+  <div id="disclaimerModal" class="disclaimer-overlay disclaimer--hidden">
+    <div class="disclaimer-card">
+      <h3 class="disclaimer-title">Before you proceed</h3>
+      <p class="disclaimer-text">
+        WikiAudit is an AI-powered tool. Results are indicative and should be treated as a guide only. All output must be reviewed and verified by a human before any recommendations are made or actions taken.
+      </p>
+      <div class="disclaimer-actions">
+        <button id="disclaimerCancel" class="btn-outline disclaimer-btn">Cancel</button>
+        <button id="disclaimerProceed" class="btn-gradient disclaimer-btn">Proceed</button>
+      </div>
+    </div>
   </div>
 
   <script src="config.js"></script>

@@ -439,6 +439,64 @@
   margin-top: 8px;
 }
 
+/* ─── Disclaimer Modal ──────────────────────────────────────── */
+.disclaimer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.disclaimer--hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.disclaimer-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+}
+
+.disclaimer-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+
+.disclaimer-text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+}
+
+.disclaimer-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.disclaimer-btn {
+  padding: 10px 28px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
 /* ─── Results Header ─────────────────────────────────────────── */
 .results-header-card {
   padding: 24px 28px;
